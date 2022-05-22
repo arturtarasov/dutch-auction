@@ -21,7 +21,30 @@ contract DutchAuction {
 
     Auction[] public auctions;
 
+    event AuctionCreated(uint index, string itemName, uint startingPrice, uint duration);
+
     constructor() {
         owner = msg.sender;
+    }
+
+    function createAuction(uint _startingPrice, uint _discountRate, string memory _item, uint _duration) external {
+        uint duration = _duration == 0 ? DURATION : _duration;
+
+        require(_startingPrice >= _discountRate * duration, "incorrect starting price");
+
+        Auction memory newAuction = Auction({
+            seller: payable(msg.sender),
+            startingPrice: _startingPrice,
+            finalPrice: _startingPrice,
+            discountRate: _discountRate,
+            startAt: block.timestamp, // now
+            endsAt: block.timestamp + duration,
+            item: _item,
+            stopped: false
+        });
+
+        auctions.push(newAuction);
+
+        emit AuctionCreated(auctions.length - 1, _item, _startingPrice, duration);
     }
 }
