@@ -23,6 +23,8 @@ contract DutchAuction {
 
     event AuctionCreated(uint index, string itemName, uint startingPrice, uint duration);
 
+    event AuctionEnded(uint index, uint finalPrice, address winner);
+
     constructor() {
         owner = msg.sender;
     }
@@ -54,5 +56,25 @@ contract DutchAuction {
         uint elapsed = block.timestamp - cAuction.startAt;
         uint discount = cAuction.discountRate * elapsed;
         return cAuction.startingPrice - discount;
+    }
+
+    function buy(uint index) external payable {
+        Auction storage cAuction = auctions[index];
+        require(!cAuction.stopped, "stopped!");
+        require(block.timestamp < cAuction.endsAt, "ended!");
+        uint cPrice = getPriceFor(index);
+        require(msg.value >= cPrice, "not enough funds!");
+        cAuction.stopped = true;
+        cAuction.finalPrice = cPrice;
+        uint refund = msg.value - cPrice;
+        if(refund > 0) {
+            payable(msg.sender).transfer(refund);
+        }
+        cAuction.seller.transfer(
+            cPrice - ((cPrice * FEE) / 100)
+        ); // 500
+        // 500 - ((500 * 10) / 100) = 500 - 50 = 450
+        // Math.floor --> JS
+        emit AuctionEnded(index, cPrice, msg.sender);
     }
 }
